@@ -1,0 +1,57 @@
+# GCP Configuration Example
+# Copy this file to terraform.tfvars and update with your values
+# DO NOT commit terraform.tfvars to version control
+
+gcp_project_id = "your-gcp-project-id"
+gcp_region     = "us-central1"
+project_name   = "myproject"
+environment    = "dev"
+owner          = "yourname"
+
+# VPC Configuration
+vpc_auto_create_subnets = false
+
+# Subnet Configuration
+subnet_configs = [
+  {
+    name          = "public-subnet-1"
+    ip_cidr_range = "10.0.1.0/24"
+    region        = "us-central1"
+  },
+  {
+    name          = "private-subnet-1"
+    ip_cidr_range = "10.0.11.0/24"
+    region        = "us-central1"
+  }
+]
+
+# NAT Configuration
+enable_cloud_nat = true
+
+# Firewall Rules
+firewall_rules = [
+  {
+    name          = "allow-ssh"
+    direction     = "INGRESS"
+    priority      = 1000
+    source_ranges = ["0.0.0.0/0"]
+    allow = [
+      {
+        protocol = "tcp"
+        ports    = ["22"]
+      }
+    ]
+  },
+  {
+    name          = "allow-http-https"
+    direction     = "INGRESS"
+    priority      = 1000
+    source_ranges = ["0.0.0.0/0"]
+    allow = [
+      {
+        protocol = "tcp"
+        ports    = ["80", "443"]
+      }
+    ]
+  }
+]
