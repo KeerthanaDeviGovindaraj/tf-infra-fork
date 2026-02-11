@@ -1,4 +1,4 @@
-# Terraform Infrastructure as Code
+# Terraform Infrastructure as Code - Assignment 3 
 
 This repository contains Terraform configurations for deploying cloud networking infrastructure on AWS and GCP.
 
