@@ -24,19 +24,16 @@ jobs:
           terraform_version: 1.7.0
 
       - name: Terraform Format Check (AWS)
-        run: |
-          cd aws
-          terraform fmt -check -recursive
+        working-directory: ./aws
+        run: terraform fmt -check -recursive
 
       - name: Terraform Init (AWS)
-        run: |
-          cd aws
-          terraform init -backend=false
+        working-directory: ./aws
+        run: terraform init -backend=false
 
       - name: Terraform Validate (AWS)
-        run: |
-          cd aws
-          terraform validate
+        working-directory: ./aws
+        run: terraform validate
 
   terraform-gcp:
     name: Terraform GCP - Format and Validate
@@ -52,16 +49,13 @@ jobs:
           terraform_version: 1.7.0
 
       - name: Terraform Format Check (GCP)
-        run: |
-          cd gcp
-          terraform fmt -check -recursive
+        working-directory: ./gcp
+        run: terraform fmt -check -recursive
 
       - name: Terraform Init (GCP)
-        run: |
-          cd gcp
-          terraform init -backend=false
+        working-directory: ./gcp
+        run: terraform init -backend=false
 
       - name: Terraform Validate (GCP)
-        run: |
-          cd gcp
-          terraform validate
+        working-directory: ./gcp
+        run: terraform validate
