@@ -47,3 +47,29 @@ output "private_route_table_id" {
   description = "ID of the private route table"
   value       = aws_route_table.private.id
 }
+
+# AWS Instance Outputs
+output "aws_instance_id" {
+  description = "ID of the AWS EC2 instance"
+  value       = aws_instance.webapp.id
+}
+
+output "aws_instance_public_ip" {
+  description = "Public IP of the AWS EC2 instance"
+  value       = aws_instance.webapp.public_ip
+}
+
+output "aws_ami_id" {
+  description = "AMI ID used"
+  value       = data.aws_ami.webapp.id
+}
+
+output "aws_application_url" {
+  description = "Application URL"
+  value       = "http://${aws_instance.webapp.public_ip}:${var.application_port}"
+}
+
+output "aws_metadata_endpoint" {
+  description = "Metadata endpoint URL"
+  value       = "http://${aws_instance.webapp.public_ip}:${var.application_port}/v1/metadata"
+}
