@@ -47,3 +47,22 @@ variable "private_subnet_cidrs" {
     error_message = "Must provide exactly 3 private subnet CIDR blocks."
   }
 }
+
+# Application Configuration
+variable "application_port" {
+  description = "Port on which the application runs"
+  type        = number
+  default     = 8080
+}
+
+# AWS Instance Configuration
+variable "aws_instance_type" {
+  description = "EC2 instance type"
+  type        = string
+  default     = "t2.micro"
+
+  validation {
+    condition     = contains(["t2.micro", "t2.small", "t2.medium"], var.aws_instance_type)
+    error_message = "Instance type must be t2.micro, t2.small, or t2.medium."
+  }
+}
