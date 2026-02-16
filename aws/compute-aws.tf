@@ -74,7 +74,7 @@ resource "aws_security_group" "application" {
 resource "aws_instance" "webapp" {
   ami           = data.aws_ami.webapp.id
   instance_type = var.aws_instance_type
-  
+
   subnet_id              = aws_subnet.public[0].id
   vpc_security_group_ids = [aws_security_group.application.id]
 

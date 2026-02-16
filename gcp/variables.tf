@@ -38,7 +38,7 @@ variable "gcp_machine_type" {
   description = "GCP machine type"
   type        = string
   default     = "e2-medium"
-  
+
   validation {
     condition     = contains(["e2-micro", "e2-small", "e2-medium"], var.gcp_machine_type)
     error_message = "Machine type must be e2-micro, e2-small, or e2-medium."
