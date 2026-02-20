@@ -70,13 +70,27 @@ resource "aws_security_group" "application" {
   }
 }
 
-# EC2 Instance
+# EC2 Instance with IAM profile and user data
 resource "aws_instance" "webapp" {
   ami           = data.aws_ami.webapp.id
   instance_type = var.aws_instance_type
 
   subnet_id              = aws_subnet.public[0].id
   vpc_security_group_ids = [aws_security_group.application.id]
+
+  # Attach IAM instance profile (no hardcoded AWS credentials)
+  iam_instance_profile = aws_iam_instance_profile.webapp_profile.name
+
+  # User data: inject DB config + S3 bucket name into /opt/webapp/.env
+  user_data = base64encode(templatefile("${path.module}/user_data.sh", {
+    db_host        = aws_db_instance.webapp.address
+    db_port        = tostring(aws_db_instance.webapp.port)
+    db_name        = var.db_name
+    db_username    = var.db_username
+    db_password    = var.db_password
+    s3_bucket_name = aws_s3_bucket.syllabus.bucket
+    aws_region     = var.aws_region
+  }))
 
   root_block_device {
     volume_size           = 25
@@ -98,6 +112,9 @@ resource "aws_instance" "webapp" {
   depends_on = [
     aws_subnet.public,
     aws_internet_gateway.main,
-    aws_route_table.public
+    aws_route_table.public,
+    aws_db_instance.webapp,
+    aws_s3_bucket.syllabus,
+    aws_iam_instance_profile.webapp_profile
   ]
 }
