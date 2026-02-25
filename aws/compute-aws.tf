@@ -70,10 +70,18 @@ resource "aws_security_group" "application" {
   }
 }
 
+resource "aws_key_pair" "webapp" {
+  key_name   = "${var.vpc_name}-webapp-key"
+  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKkCneXFkO2saI54hlqkZlargBDmlQWjWu8Tx83LGTIU govindaraj.ke@northeastern.edu"
+}
+
+
 # EC2 Instance with IAM profile and user data
 resource "aws_instance" "webapp" {
   ami           = data.aws_ami.webapp.id
   instance_type = var.aws_instance_type
+
+  key_name = aws_key_pair.webapp.key_name
 
   subnet_id              = aws_subnet.public[0].id
   vpc_security_group_ids = [aws_security_group.application.id]
