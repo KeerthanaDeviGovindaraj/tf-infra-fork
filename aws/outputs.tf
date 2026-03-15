@@ -47,3 +47,7 @@ output "private_route_table_id" {
   description = "ID of the private route table"
   value       = aws_route_table.private.id
 }
+output "app_url" {
+  description = "Application URL via domain name"
+  value       = "http://${var.domain_name}:8080"
+}

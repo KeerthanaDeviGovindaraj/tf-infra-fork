@@ -47,3 +47,9 @@ variable "private_subnet_cidrs" {
     error_message = "Must provide exactly 3 private subnet CIDR blocks."
   }
 }
+# ─── Route53 / DNS ───
+
+variable "domain_name" {
+  description = "The Route53 hosted zone domain name for this environment (e.g. dev.yourname.me)"
+  type        = string
+}
