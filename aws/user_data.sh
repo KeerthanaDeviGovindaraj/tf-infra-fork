@@ -4,7 +4,7 @@ set -e
 echo "=== EC2 User Data: Configuring webapp ==="
 
 # Write environment file for the webapp service
-cat > /opt/webapp/.env <<EOF
+cat > /opt/webapp/.env <<ENVEOF
 DB_HOST=${db_host}
 DB_PORT=${db_port}
 DB_NAME=${db_name}
@@ -14,7 +14,7 @@ S3_BUCKET_NAME=${s3_bucket_name}
 AWS_REGION=${aws_region}
 APP_HOST=0.0.0.0
 APP_PORT=8080
-EOF
+ENVEOF
 
 # Set proper ownership and permissions
 chown csye6225:csye6225 /opt/webapp/.env
@@ -29,5 +29,17 @@ fi
 systemctl daemon-reload
 systemctl enable webapp.service
 systemctl restart webapp.service
+
+echo "=== Configuring CloudWatch Agent ==="
+
+# Configure and start CloudWatch Agent
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config \
+  -m ec2 \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-config.json \
+  -s
+
+systemctl enable amazon-cloudwatch-agent
+systemctl restart amazon-cloudwatch-agent
 
 echo "=== EC2 User Data: Configuration complete ==="

@@ -108,3 +108,9 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+# ─── Route53 / DNS ───
+
+variable "domain_name" {
+  description = "The Route53 hosted zone domain name for this environment (e.g. dev.yourname.click)"
+  type        = string
+}

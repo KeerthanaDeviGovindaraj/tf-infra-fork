@@ -52,11 +52,18 @@ resource "aws_iam_policy" "webapp_s3_policy" {
   })
 }
 
-# ─── Attach policy to role ───
+# ─── Attach S3 policy to role ───
 
 resource "aws_iam_role_policy_attachment" "webapp_s3_attach" {
   role       = aws_iam_role.webapp_ec2_role.name
   policy_arn = aws_iam_policy.webapp_s3_policy.arn
+}
+
+# ─── Attach CloudWatch Agent policy to role ───
+
+resource "aws_iam_role_policy_attachment" "webapp_cloudwatch_attach" {
+  role       = aws_iam_role.webapp_ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
 # ─── Instance Profile ───
