@@ -55,3 +55,10 @@ firewall_rules = [
     ]
   }
 ]
+
+gcp_project_id   = "your-dev-project-id"
+gcp_region       = "us-east1"
+gcp_zone         = "us-east1-b"
+vpc_name         = "csye6225-vpc"
+application_port = 8080
+gcp_machine_type = "e2-medium"

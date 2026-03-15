@@ -25,3 +25,28 @@ variable "private_subnet_cidrs" {
   type        = list(string)
   default     = ["10.1.11.0/24", "10.1.12.0/24", "10.1.13.0/24"]
 }
+
+# Application Configuration
+variable "application_port" {
+  description = "Port on which the application runs"
+  type        = number
+  default     = 8080
+}
+
+# GCP Instance Configuration
+variable "gcp_machine_type" {
+  description = "GCP machine type"
+  type        = string
+  default     = "e2-medium"
+
+  validation {
+    condition     = contains(["e2-micro", "e2-small", "e2-medium"], var.gcp_machine_type)
+    error_message = "Machine type must be e2-micro, e2-small, or e2-medium."
+  }
+}
+
+variable "gcp_zone" {
+  description = "GCP zone"
+  type        = string
+  default     = "us-east1-b"
+}
