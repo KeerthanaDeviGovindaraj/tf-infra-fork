@@ -30,3 +30,34 @@ output "firewall_rule_ids" {
     deny_all     = google_compute_firewall.deny_all.id
   }
 }
+
+# GCP Instance Outputs
+output "gcp_instance_name" {
+  description = "Name of the GCP instance"
+  value       = google_compute_instance.webapp.name
+}
+
+output "gcp_instance_external_ip" {
+  description = "External IP of the GCP instance"
+  value       = google_compute_instance.webapp.network_interface[0].access_config[0].nat_ip
+}
+
+output "gcp_instance_internal_ip" {
+  description = "Internal IP of the GCP instance"
+  value       = google_compute_instance.webapp.network_interface[0].network_ip
+}
+
+output "gcp_image_name" {
+  description = "Image name used"
+  value       = data.google_compute_image.webapp.name
+}
+
+output "gcp_application_url" {
+  description = "Application URL"
+  value       = "http://${google_compute_instance.webapp.network_interface[0].access_config[0].nat_ip}:${var.application_port}"
+}
+
+output "gcp_metadata_endpoint" {
+  description = "Metadata endpoint URL"
+  value       = "http://${google_compute_instance.webapp.network_interface[0].access_config[0].nat_ip}:${var.application_port}/v1/metadata"
+}
