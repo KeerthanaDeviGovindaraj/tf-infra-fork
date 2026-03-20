@@ -191,7 +191,7 @@ resource "aws_autoscaling_group" "webapp" {
   name                      = "${var.vpc_name}-webapp-asg"
   min_size                  = 3
   max_size                  = 5
-  desired_capacity          = 1
+  desired_capacity          = 3
   default_cooldown          = 60
   vpc_zone_identifier       = [for s in aws_subnet.public : s.id]
   target_group_arns         = [aws_lb_target_group.webapp.arn]
