@@ -1,163 +1,183 @@
-# Terraform Infrastructure as Code - Assignment 3 
+# Terraform Infrastructure as Code - CSYE 6225
 
 This repository contains Terraform configurations for deploying cloud networking infrastructure on AWS and GCP.
 
 ## Repository Structure
+
 ```
 tf-infra/
 ├── .github/
 │   └── workflows/
-│       └── terraform-ci.yml    # GitHub Actions CI/CD workflow
-├── aws/                        # AWS infrastructure
-│   ├── main.tf                 # VPC, subnets, route tables
-│   ├── variables.tf            # Variable declarations
-│   ├── outputs.tf              # Output definitions
-│   ├── providers.tf            # AWS provider configuration
-│   └── terraform.tfvars.example # Example variable values
-├── gcp/                        # GCP infrastructure
-│   ├── main.tf                 # VPC network, subnets, firewall rules
-│   ├── variables.tf            # Variable declarations
-│   ├── outputs.tf              # Output definitions
-│   ├── providers.tf            # GCP provider configuration
-│   └── terraform.tfvars.example # Example variable values
-├── .gitignore                  # Git ignore rules
-└── README.md                   # This file
+│       └── terraform-ci.yml        # GitHub Actions CI/CD workflow
+├── aws/                            # AWS infrastructure
+│   ├── main.tf                     # VPC, subnets, route tables
+│   ├── compute-aws.tf              # EC2 instance configuration
+│   ├── rds.tf                      # RDS PostgreSQL instance
+│   ├── s3.tf                       # S3 bucket for syllabus files
+│   ├── iam.tf                      # IAM roles and policies
+│   ├── route53.tf                  # DNS records
+│   ├── variables.tf                # Variable declarations
+│   ├── outputs.tf                  # Output definitions
+│   ├── providers.tf                # AWS provider configuration
+│   ├── user_data.sh                # EC2 userdata script
+│   └── terraform.tfvars.example   # Example variable values
+├── gcp/                            # GCP infrastructure
+│   ├── main.tf                     # VPC network, subnets, firewall rules
+│   ├── compute-gcp.tf              # GCP compute instance
+│   ├── variables.tf                # Variable declarations
+│   ├── outputs.tf                  # Output definitions
+│   ├── providers.tf                # GCP provider configuration
+│   └── terraform.tfvars.example   # Example variable values
+├── .gitignore                      # Git ignore rules
+└── README.md                       # This file
 ```
 
 ## Prerequisites
 
-- [Terraform](https://www.terraform.io/downloads) >= 1.0
-- [AWS CLI](https://aws.amazon.com/cli/) configured with profiles: `dev` and `demo`
-- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) configured with configurations: `dev` and `demo`
+- Terraform >= 1.0
+- AWS CLI configured with profiles: `dev` and `demo`
+- Google Cloud CLI configured with configurations: `dev` and `demo`
 - AWS account with appropriate IAM permissions
 - GCP project with appropriate service account permissions
+
+---
 
 ## AWS Infrastructure
 
 ### Resources Created
 
-- **1 VPC** with DNS support and hostnames enabled
-- **3 Public Subnets** across 3 different availability zones
-- **3 Private Subnets** across 3 different availability zones
-- **1 Internet Gateway** attached to the VPC
-- **1 Public Route Table** with route to Internet Gateway
-- **1 Private Route Table** for private subnets
-- **Route Table Associations** for all subnets
+- 1 VPC with DNS support and hostnames enabled
+- 3 Public Subnets across 3 availability zones
+- 3 Private Subnets across 3 availability zones
+- 1 Internet Gateway attached to the VPC
+- 1 Public Route Table with route to Internet Gateway
+- 1 Private Route Table for private subnets
+- Route Table Associations for all subnets
+- EC2 Instance running the web application AMI
+- RDS PostgreSQL instance in private subnets
+- S3 Bucket for syllabus file storage
+- IAM Role and policies for EC2 (CloudWatch + S3 access)
+- Route53 A record pointing to EC2 instance
+
+### IAM Roles & Policies
+
+The IAM role created by Terraform grants the EC2 instance:
+- **CloudWatchAgentServerPolicy** — allows the CloudWatch agent to publish logs and metrics
+- **S3 Policy** — scoped access to the syllabus S3 bucket (PutObject, GetObject, DeleteObject, ListBucket)
+
+> No AWS credentials are hardcoded in the AMI or EC2 instance. The IAM role is attached via instance profile.
+
+### CloudWatch Agent
+
+The EC2 userdata script (`user_data.sh`) configures and starts the CloudWatch agent on every instance launch:
+
+```bash
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config -m ec2 \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-config.json \
+  -s
+
+systemctl enable amazon-cloudwatch-agent
+systemctl restart amazon-cloudwatch-agent
+```
+
+### DNS
+
+Route53 is managed by Terraform:
+- A record for `dev.keerthana.click` → EC2 public IP
+- A record for `demo.keerthana.click` → EC2 public IP
 
 ### Usage
+
 ```bash
-# Navigate to AWS directory
 cd aws
 
-# Copy example variables file
+# Copy and edit variables
 cp terraform.tfvars.example terraform.tfvars
-
-# Edit terraform.tfvars with your values
 nano terraform.tfvars
 
-# Initialize Terraform
+# Initialize
 terraform init
 
-# Preview changes
-terraform plan
+# Preview
+terraform plan -var='db_password=YourPassword'
 
-# Apply configuration
-terraform apply
+# Apply
+terraform apply -var='db_password=YourPassword'
 
-# Destroy infrastructure (when needed)
-terraform destroy
+# Destroy
+terraform destroy -var='db_password=YourPassword'
 ```
 
 ### Configuration
 
 Edit `terraform.tfvars`:
+
 ```hcl
-aws_profile = "dev"              # or "demo"
-vpc_name    = "csye6225-dev-vpc1"
-aws_region  = "us-east-1"
+aws_region           = "us-east-1"
+aws_profile          = "dev"
+vpc_name             = "csye6225-vpc"
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
+application_port     = 8080
+aws_instance_type    = "t2.micro"
+domain_name          = "dev.keerthana.click"
 ```
 
 ### Outputs
 
-After applying, Terraform will output:
+After applying, Terraform outputs:
 - VPC ID
 - Public and Private Subnet IDs
 - Internet Gateway ID
 - Route Table IDs
-- Availability Zones used
+- EC2 public IP and app URL
+- RDS endpoint
+- S3 bucket name
+
+---
 
 ## GCP Infrastructure
 
 ### Resources Created
 
-- **1 VPC Network** with custom subnet mode
-- **3 Public Subnets** in us-east1 region
-- **3 Private Subnets** in us-east1 region
-- **1 Internet Route** (0.0.0.0/0 → default internet gateway)
-- **Firewall Rules**:
-  - Allow SSH (22), HTTP (80), HTTPS (443) from anywhere
-  - Deny all other ingress traffic
-- **1 Cloud Router** (for future NAT configuration)
+- 1 VPC Network with custom subnet mode
+- 3 Public Subnets in `us-east1` region
+- 3 Private Subnets in `us-east1` region
+- 1 Internet Route (0.0.0.0/0 → default internet gateway)
+- Firewall Rules: Allow SSH (22), HTTP (80), HTTPS (443), app port (8080)
+- GCP Compute Instance running the web application image
+- 1 Cloud Router
 
 ### Usage
+
 ```bash
-# Navigate to GCP directory
 cd gcp
 
-# Activate GCP configuration
-gcloud config configurations activate dev  # or demo
-
-# Authenticate for Terraform
+gcloud config configurations activate dev
 gcloud auth application-default login
 
-# Copy example variables file
 cp terraform.tfvars.example terraform.tfvars
-
-# Edit terraform.tfvars with your values
 nano terraform.tfvars
 
-# Initialize Terraform
 terraform init
-
-# Preview changes
 terraform plan
-
-# Apply configuration
 terraform apply
-
-# Destroy infrastructure (when needed)
 terraform destroy
 ```
 
 ### Configuration
 
 Edit `terraform.tfvars`:
+
 ```hcl
 gcp_project_id = "csye6225-dev-487102"
 vpc_name       = "csye6225-dev-vpc1"
 gcp_region     = "us-east1"
 ```
 
-### Outputs
-
-After applying, Terraform will output:
-- VPC Network ID and Name
-- Public and Private Subnet IDs
-- Cloud Router ID
-- Firewall Rule IDs
-
-## Multiple Deployments
-
-This configuration supports creating multiple VPCs in the same account/project by using unique values for `vpc_name`:
-```hcl
-# First deployment
-vpc_name = "csye6225-dev-vpc1"
-
-# Second deployment
-vpc_name = "csye6225-dev-vpc2"
-```
-
-All resources will be prefixed with the VPC name to ensure uniqueness.
+---
 
 ## CI/CD Pipeline
 
@@ -165,16 +185,14 @@ This repository uses GitHub Actions for continuous integration.
 
 ### Workflow Triggers
 
-The CI pipeline runs on:
 - Pull requests to `main` branch
 - Changes to `aws/`, `gcp/`, or workflow files
 
 ### Pipeline Steps
 
-For both AWS and GCP:
-1. **Terraform Format Check**: Validates code formatting
-2. **Terraform Init**: Initializes providers (without backend)
-3. **Terraform Validate**: Validates configuration syntax
+- Terraform Format Check
+- Terraform Init
+- Terraform Validate
 
 ### Status Checks
 
@@ -182,100 +200,81 @@ Pull requests must pass all status checks before merging:
 - ✅ Terraform AWS - Format and Validate
 - ✅ Terraform GCP - Format and Validate
 
-## Branch Protection
+---
 
-The `main` branch is protected with the following rules:
-- Pull requests required before merging
-- Status checks must pass
-- Branches must be up to date
-- No bypassing allowed
+## DNS Setup
+
+### Zone Delegation
+
+| Zone | Account | Type |
+|------|---------|------|
+| `keerthana.click` | Root | Public Hosted Zone |
+| `dev.keerthana.click` | Dev | Public Hosted Zone |
+| `demo.keerthana.click` | Demo | Public Hosted Zone |
+
+NS records for `dev` and `demo` subdomains are configured in the root account for zone delegation.
+
+The application is accessible at:
+- Dev: `http://dev.keerthana.click:8080`
+- Demo: `http://demo.keerthana.click:8080`
+
+---
 
 ## Development Workflow
 
-1. **Fork** the repository to your personal namespace
-2. **Create a branch** for your changes:
-```bash
+1. Fork the repository
+2. Create a feature branch:
+   ```bash
    git checkout -b feature/my-changes
-```
-3. **Make changes** to Terraform configurations
-4. **Format code**:
-```bash
+   ```
+3. Make changes
+4. Format and validate:
+   ```bash
    terraform fmt -recursive
-```
-5. **Validate locally**:
-```bash
    cd aws && terraform validate
    cd ../gcp && terraform validate
-```
-6. **Commit and push**:
-```bash
-   git add .
-   git commit -m "Description of changes"
-   git push origin feature/my-changes
-```
-7. **Create Pull Request** on GitHub
-8. **Wait for CI** checks to pass
-9. **Merge** after approval
+   ```
+5. Commit and push
+6. Create Pull Request
+7. Wait for CI checks to pass
+8. Merge after approval
+
+---
 
 ## Security Considerations
 
-### Sensitive Files
+- `terraform.tfvars` is excluded from version control
+- No credentials or access keys committed to the repository
+- IAM roles use least privilege policies
+- RDS is deployed in private subnets (not publicly accessible)
+- S3 bucket access is scoped to the specific bucket only
+- CloudWatch agent uses IAM role — no hardcoded AWS credentials
 
-The following files are excluded from version control (`.gitignore`):
-- `*.tfvars` - Contains environment-specific values
-- `*.tfstate` - Contains infrastructure state (may contain sensitive data)
-- `.terraform/` - Provider plugins and modules
-- AWS and GCP credentials
-
-### Credentials Management
-
-- **AWS**: Use AWS CLI profiles (`dev`, `demo`) with IAM user access keys
-- **GCP**: Use `gcloud auth application-default login` for authentication
-- **Never commit** credentials, access keys, or service account keys
-
-### Best Practices
-
-- Always use separate `dev` and `demo` environments
-- Review Terraform plans before applying
-- Use least privilege IAM policies
-- Regularly rotate access keys
-- Enable MFA on cloud accounts
+---
 
 ## Troubleshooting
 
 ### AWS CLI Issues
+
 ```bash
-# Verify AWS CLI configuration
 aws configure list --profile dev
 aws sts get-caller-identity --profile dev
-
-# If credentials are invalid, reconfigure
 aws configure --profile dev
 ```
 
 ### GCP Authentication Issues
+
 ```bash
-# Re-authenticate
 gcloud auth application-default login --no-launch-browser
-
-# Verify active configuration
 gcloud config configurations list
-gcloud config list
-
-# Switch configurations
 gcloud config configurations activate dev
 ```
 
 ### Terraform Errors
+
 ```bash
-# Remove local state and re-initialize
 rm -rf .terraform .terraform.lock.hcl
 terraform init
-
-# Format all files
 terraform fmt -recursive
-
-# Validate configuration
 terraform validate
 ```
-
