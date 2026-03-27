@@ -153,7 +153,7 @@ resource "aws_iam_policy" "lambda_policy" {
         Sid    = "AllowSES"
         Effect = "Allow"
         Action = ["ses:SendEmail", "ses:SendRawEmail"]
-        Resource = "*"
+        Resource = "arn:aws:ses:${var.aws_region}:*:identity/${var.ses_from_email}"
       }
     ]
   })
