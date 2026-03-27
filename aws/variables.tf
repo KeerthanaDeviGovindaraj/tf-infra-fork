@@ -114,3 +114,19 @@ variable "domain_name" {
   description = "The Route53 hosted zone domain name for this environment (e.g. dev.yourname.click)"
   type        = string
 }
+
+variable "ses_from_email" {
+  description = "Verified SES email address used to send verification emails"
+  type        = string
+}
+
+variable "app_domain" {
+  description = "Domain of the web application (used in verification email link)"
+  type        = string
+}
+
+variable "lambda_zip_path" {
+  description = "Path to the Lambda function ZIP file"
+  type        = string
+  default     = "./lambda.zip"
+}

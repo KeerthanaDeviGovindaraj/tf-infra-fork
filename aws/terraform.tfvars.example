@@ -27,3 +27,8 @@ db_parameter_group_family = "postgres16"
 db_name                   = "csye6225"
 db_username               = "csye6225"
 db_password               = "YourStr0ngP@ssword!"  # CHANGE THIS
+
+
+ses_from_email  = "no-reply@example.com"
+app_domain      = "example.com"
+lambda_zip_path = "./lambda.zip"

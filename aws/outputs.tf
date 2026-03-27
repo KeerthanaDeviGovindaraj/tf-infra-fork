@@ -53,3 +53,18 @@ output "app_url" {
   description = "Application URL via domain name"
   value       = "http://${var.domain_name}:8080"
 }
+
+output "sns_topic_arn" {
+  description = "ARN of the SNS user verification topic"
+  value       = aws_sns_topic.user_verification.arn
+}
+
+output "lambda_function_arn" {
+  description = "ARN of the email verification Lambda function"
+  value       = aws_lambda_function.email_lambda.arn
+}
+
+output "dynamodb_table_name" {
+  description = "Name of the DynamoDB email tracking table"
+  value       = aws_dynamodb_table.email_tracking.name
+}
