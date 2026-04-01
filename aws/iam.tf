@@ -84,9 +84,9 @@ resource "aws_iam_policy" "webapp_sns_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "AllowSNSPublish"
-        Effect = "Allow"
-        Action = ["sns:Publish"]
+        Sid      = "AllowSNSPublish"
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
         Resource = aws_sns_topic.user_verification.arn
       }
     ]
@@ -138,7 +138,7 @@ resource "aws_iam_policy" "lambda_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/*"
       },
       {
         Sid    = "AllowDynamoDB"
@@ -150,10 +150,11 @@ resource "aws_iam_policy" "lambda_policy" {
         Resource = aws_dynamodb_table.email_tracking.arn
       },
       {
-        Sid    = "AllowSES"
-        Effect = "Allow"
-        Action = ["ses:SendEmail", "ses:SendRawEmail"]
-        Resource = "arn:aws:ses:${var.aws_region}:*:identity/${var.ses_from_email}"
+        Sid      = "AllowSES"
+        Effect   = "Allow"
+        Action   = ["ses:SendEmail", "ses:SendRawEmail"]
+        Resource = "*"
+        //Resource = "arn:aws:ses:${var.aws_region}:*:identity/${var.domain_name}"
       }
     ]
   })
