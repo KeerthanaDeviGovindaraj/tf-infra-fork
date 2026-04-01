@@ -115,6 +115,7 @@ resource "aws_launch_template" "webapp" {
     db_password    = var.db_password
     s3_bucket_name = aws_s3_bucket.syllabus.bucket
     aws_region     = var.aws_region
+    sns_topic_arn  = aws_sns_topic.user_verification.arn
   }))
 
   block_device_mappings {

@@ -1,7 +1,7 @@
-# ─── A Record: alias to Load Balancer (replaces EC2 IP) ───
+# ─── A Record: alias to Load Balancer ───
 
 resource "aws_route53_record" "webapp" {
-  zone_id = "Z06555121LSBIWVMZVAH"
+  zone_id = "Z04656191C89OSEWJWNC8"
   name    = var.domain_name
   type    = "A"
 

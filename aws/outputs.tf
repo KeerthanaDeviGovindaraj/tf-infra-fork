@@ -45,7 +45,18 @@ output "load_balancer_dns" {
   description = "DNS name of the Application Load Balancer"
   value       = aws_lb.webapp.dns_name
 }
-output "app_url" {
-  description = "Application URL via domain name (via load balancer)"
-  value       = "http://${var.domain_name}"
+
+output "sns_topic_arn" {
+  description = "ARN of the SNS user verification topic"
+  value       = aws_sns_topic.user_verification.arn
+}
+
+output "lambda_function_arn" {
+  description = "ARN of the email verification Lambda function"
+  value       = aws_lambda_function.email_lambda.arn
+}
+
+output "dynamodb_table_name" {
+  description = "Name of the DynamoDB email tracking table"
+  value       = aws_dynamodb_table.email_tracking.name
 }

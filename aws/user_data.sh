@@ -12,6 +12,7 @@ DB_USER=${db_username}
 DB_PASSWORD=${db_password}
 S3_BUCKET_NAME=${s3_bucket_name}
 AWS_REGION=${aws_region}
+SNS_TOPIC_ARN=${sns_topic_arn}
 APP_HOST=0.0.0.0
 APP_PORT=8080
 ENVEOF
