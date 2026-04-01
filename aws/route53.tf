@@ -1,4 +1,4 @@
-# ─── A Record: point domain to EC2 instance ───
+# ─── A Record: alias to Load Balancer (replaces EC2 IP) ───
 
 resource "aws_route53_record" "webapp" {
   zone_id         = "Z06555121LSBIWVMZVAH"
