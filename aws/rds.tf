@@ -5,7 +5,6 @@ resource "aws_security_group" "database" {
   description = "Security group for RDS instances - only allows traffic from application SG"
   vpc_id      = aws_vpc.main.id
 
-  # Ingress: PostgreSQL port from application security group ONLY
   ingress {
     description     = "PostgreSQL from application SG"
     from_port       = 5432
@@ -14,7 +13,6 @@ resource "aws_security_group" "database" {
     security_groups = [aws_security_group.application.id]
   }
 
-  # No egress needed for DB, but allow all outbound for updates etc.
   egress {
     description = "Allow all outbound"
     from_port   = 0
@@ -63,25 +61,22 @@ resource "aws_db_instance" "webapp" {
 
   db_name  = var.db_name
   username = var.db_username
-  password = var.db_password
+  password = random_password.db_password.result # ← now auto-generated
 
-  # Private subnet, NOT publicly accessible
+  # KMS encryption for RDS
+  storage_encrypted = true
+  kms_key_id        = aws_kms_key.rds_key.arn
+
   db_subnet_group_name   = aws_db_subnet_group.private.name
   publicly_accessible    = false
   vpc_security_group_ids = [aws_security_group.database.id]
 
-  # Custom parameter group
   parameter_group_name = aws_db_parameter_group.webapp.name
 
-  # Single AZ
-  multi_az = false
-
-  # No final snapshot for dev
+  multi_az                  = false
   skip_final_snapshot       = true
   final_snapshot_identifier = "csye6225-final-snapshot"
-
-  # Disable automated backups for dev (optional)
-  backup_retention_period = 0
+  backup_retention_period   = 0
 
   tags = {
     Name = "${var.vpc_name}-rds-instance"
@@ -89,6 +84,7 @@ resource "aws_db_instance" "webapp" {
 
   depends_on = [
     aws_db_subnet_group.private,
-    aws_security_group.database
+    aws_security_group.database,
+    aws_kms_key.rds_key
   ]
 }

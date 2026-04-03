@@ -52,14 +52,12 @@ variable "private_subnet_cidrs" {
   }
 }
 
-# Application Configuration
 variable "application_port" {
   description = "Port on which the application runs"
   type        = number
   default     = 8080
 }
 
-# AWS Instance Configuration
 variable "aws_instance_type" {
   description = "EC2 instance type"
   type        = string
@@ -103,16 +101,22 @@ variable "db_username" {
   default     = "csye6225"
 }
 
-variable "db_password" {
-  description = "Database master password"
-  type        = string
-  sensitive   = true
-}
 # ─── Route53 / DNS ───
 
 variable "domain_name" {
-  description = "The Route53 hosted zone domain name for this environment (e.g. dev.yourname.click)"
+  description = "The Route53 hosted zone domain name for this environment"
   type        = string
+}
+
+variable "route53_zone_id" {
+  description = "Route53 hosted zone ID for the environment (different for DEV and DEMO)"
+  type        = string
+}
+
+variable "acm_certificate_arn" {
+  description = "ACM certificate ARN. Leave empty for DEV (auto-created). Set for DEMO (imported cert)."
+  type        = string
+  default     = ""
 }
 
 variable "ses_from_email" {
