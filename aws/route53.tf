@@ -1,7 +1,6 @@
 # ─── A Record: alias to Load Balancer ───
-
 resource "aws_route53_record" "webapp" {
-  zone_id = "Z04656191C89OSEWJWNC8"
+  zone_id = var.route53_zone_id
   name    = var.domain_name
   type    = "A"
 
