@@ -3,13 +3,20 @@ set -e
 
 echo "=== EC2 User Data: Configuring webapp ==="
 
+# Fetch DB password from Secrets Manager at boot time
+DB_PASSWORD=$(aws secretsmanager get-secret-value \
+  --secret-id "${db_secret_arn}" \
+  --region "${aws_region}" \
+  --query SecretString \
+  --output text)
+
 # Write environment file for the webapp service
 cat > /opt/webapp/.env <<ENVEOF
 DB_HOST=${db_host}
 DB_PORT=${db_port}
 DB_NAME=${db_name}
 DB_USER=${db_username}
-DB_PASSWORD=${db_password}
+DB_PASSWORD=$DB_PASSWORD
 S3_BUCKET_NAME=${s3_bucket_name}
 AWS_REGION=${aws_region}
 SNS_TOPIC_ARN=${sns_topic_arn}
@@ -33,7 +40,6 @@ systemctl restart webapp.service
 
 echo "=== Configuring CloudWatch Agent ==="
 
-# Configure and start CloudWatch Agent
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
   -a fetch-config \
   -m ec2 \

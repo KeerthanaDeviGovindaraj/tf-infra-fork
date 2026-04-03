@@ -103,11 +103,11 @@ variable "db_username" {
   default     = "csye6225"
 }
 
-variable "db_password" {
-  description = "Database master password"
-  type        = string
-  sensitive   = true
-}
+# variable "db_password" {
+#   description = "Database master password"
+#   type        = string
+#   sensitive   = true
+# }
 # ─── Route53 / DNS ───
 
 variable "domain_name" {

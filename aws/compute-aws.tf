@@ -107,12 +107,12 @@ resource "aws_launch_template" "webapp" {
     name = aws_iam_instance_profile.webapp_profile.name
   }
 
-  user_data = base64encode(templatefile("${path.module}/user_data.sh", {
+   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
     db_host        = aws_db_instance.webapp.address
     db_port        = tostring(aws_db_instance.webapp.port)
     db_name        = var.db_name
     db_username    = var.db_username
-    db_password    = var.db_password
+    db_secret_arn  = aws_secretsmanager_secret.db_password.arn  # ← NEW
     s3_bucket_name = aws_s3_bucket.syllabus.bucket
     aws_region     = var.aws_region
     sns_topic_arn  = aws_sns_topic.user_verification.arn
@@ -124,6 +124,8 @@ resource "aws_launch_template" "webapp" {
       volume_size           = 25
       volume_type           = "gp2"
       delete_on_termination = true
+      encrypted             = true                    # ← NEW
+      kms_key_id            = aws_kms_key.ec2_key.arn # ← NEW
     }
   }
 
@@ -220,7 +222,8 @@ resource "aws_autoscaling_group" "webapp" {
     aws_lb_listener.http,
     aws_db_instance.webapp,
     aws_s3_bucket.syllabus,
-    aws_iam_instance_profile.webapp_profile
+    aws_iam_instance_profile.webapp_profile,
+    aws_secretsmanager_secret_version.db_password
   ]
 }
 
