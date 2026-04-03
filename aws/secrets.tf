@@ -4,8 +4,8 @@
 
 # ── Auto-generate DB password ─────────────────────────────
 resource "random_password" "db_password" {
-  length           = 16
-  special          = false
+  length  = 16
+  special = false
 }
 
 # ── Store DB password in Secrets Manager ──────────────────

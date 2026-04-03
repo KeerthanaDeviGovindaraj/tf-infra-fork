@@ -61,7 +61,7 @@ resource "aws_db_instance" "webapp" {
 
   db_name  = var.db_name
   username = var.db_username
-  password = random_password.db_password.result  # ← now auto-generated
+  password = random_password.db_password.result # ← now auto-generated
 
   # KMS encryption for RDS
   storage_encrypted = true

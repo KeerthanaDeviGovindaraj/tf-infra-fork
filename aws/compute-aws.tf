@@ -107,12 +107,12 @@ resource "aws_launch_template" "webapp" {
     name = aws_iam_instance_profile.webapp_profile.name
   }
 
-   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
+  user_data = base64encode(templatefile("${path.module}/user_data.sh", {
     db_host        = aws_db_instance.webapp.address
     db_port        = tostring(aws_db_instance.webapp.port)
     db_name        = var.db_name
     db_username    = var.db_username
-    db_secret_arn  = aws_secretsmanager_secret.db_password.arn  # ← NEW
+    db_secret_arn  = aws_secretsmanager_secret.db_password.arn # ← NEW
     s3_bucket_name = aws_s3_bucket.syllabus.bucket
     aws_region     = var.aws_region
     sns_topic_arn  = aws_sns_topic.user_verification.arn
