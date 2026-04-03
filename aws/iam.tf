@@ -166,3 +166,43 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
   role       = aws_iam_role.lambda_exec_role.name
   policy_arn = aws_iam_policy.lambda_policy.arn
 }
+
+# ─── IAM Policy: Secrets Manager access for EC2 ───
+
+resource "aws_iam_policy" "webapp_secrets_policy" {
+  name        = "${var.vpc_name}-webapp-secrets-policy"
+  description = "Allow EC2 to read DB password from Secrets Manager"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ReadSecrets"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = [
+          aws_secretsmanager_secret.db_password.arn,
+          aws_secretsmanager_secret.email_credentials.arn
+        ]
+      },
+      {
+        Sid    = "UseKMSForSecrets"
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:GenerateDataKey"
+        ]
+        Resource = aws_kms_key.secrets_manager_key.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "webapp_secrets_attach" {
+  role       = aws_iam_role.webapp_ec2_role.name
+  policy_arn = aws_iam_policy.webapp_secrets_policy.arn
+}
