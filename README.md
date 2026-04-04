@@ -11,25 +11,30 @@ tf-infra/
 │       └── terraform-ci.yml        # GitHub Actions CI/CD workflow
 ├── aws/                            # AWS infrastructure
 │   ├── main.tf                     # VPC, subnets, route tables
-│   ├── compute-aws.tf              # EC2 instance configuration
+│   ├── compute-aws.tf              # Launch Template, ASG, ALB
 │   ├── rds.tf                      # RDS PostgreSQL instance
-│   ├── s3.tf                       # S3 bucket for syllabus files
+│   ├── s3.tf                       # S3 bucket for file storage
 │   ├── iam.tf                      # IAM roles and policies
 │   ├── route53.tf                  # DNS records
+│   ├── ssl.tf                      # ACM certificate and HTTPS listener
+│   ├── kms.tf                      # KMS keys for encryption
+│   ├── secrets.tf                  # Secrets Manager for DB password
+│   ├── lambda.tf                   # Lambda function and SNS trigger
 │   ├── variables.tf                # Variable declarations
 │   ├── outputs.tf                  # Output definitions
 │   ├── providers.tf                # AWS provider configuration
 │   ├── user_data.sh                # EC2 userdata script
-│   └── terraform.tfvars.example   # Example variable values
+│   ├── terraform.tfvars.example    # Example variable values (DEV)
+│   └── terraform.demo.tfvars.example # Example variable values (DEMO)
 ├── gcp/                            # GCP infrastructure
-│   ├── main.tf                     # VPC network, subnets, firewall rules
-│   ├── compute-gcp.tf              # GCP compute instance
-│   ├── variables.tf                # Variable declarations
-│   ├── outputs.tf                  # Output definitions
-│   ├── providers.tf                # GCP provider configuration
-│   └── terraform.tfvars.example   # Example variable values
-├── .gitignore                      # Git ignore rules
-└── README.md                       # This file
+│   ├── main.tf
+│   ├── compute-gcp.tf
+│   ├── variables.tf
+│   ├── outputs.tf
+│   ├── providers.tf
+│   └── terraform.tfvars.example
+├── .gitignore
+└── README.md
 ```
 
 ## Prerequisites
@@ -50,116 +55,128 @@ tf-infra/
 - 3 Public Subnets across 3 availability zones
 - 3 Private Subnets across 3 availability zones
 - 1 Internet Gateway attached to the VPC
-- 1 Public Route Table with route to Internet Gateway
-- 1 Private Route Table for private subnets
-- Route Table Associations for all subnets
-- EC2 Instance running the web application AMI
-- RDS PostgreSQL instance in private subnets
-- S3 Bucket for syllabus file storage
-- IAM Role and policies for EC2 (CloudWatch + S3 access)
-- Route53 A record pointing to EC2 instance
+- Public and Private Route Tables with associations
+- Application Load Balancer (HTTP port 80 + HTTPS port 443)
+- Launch Template with latest AMI
+- Auto Scaling Group (min 1, max 3, desired 1)
+- RDS PostgreSQL instance in private subnets (encrypted with KMS)
+- S3 Bucket for file storage (encrypted with KMS)
+- IAM Role and policies for EC2 (CloudWatch + S3 + Secrets Manager access)
+- Route53 A record (alias) pointing to ALB
+- ACM Certificate with DNS validation (DEV) / imported certificate (DEMO)
+- KMS Keys for EC2, RDS, S3, and Secrets Manager encryption
+- Secrets Manager secret for RDS password (auto-generated)
+- Lambda function for email verification (triggered by SNS)
+- DynamoDB table for email token tracking
+- SNS topic for user registration events
+
+### KMS Encryption Keys
+
+Four separate KMS keys with 90-day automatic rotation:
+
+| Key | Used For |
+|-----|----------|
+| `ec2-key` | EC2 EBS volume encryption |
+| `rds-key` | RDS storage encryption |
+| `s3-key` | S3 bucket encryption |
+| `secrets-key` | Secrets Manager secret encryption |
+
+### Secrets Manager
+
+The RDS database password is auto-generated and stored in AWS Secrets Manager. EC2 instances retrieve the password at boot time via `user_data.sh` — no passwords are hardcoded anywhere.
+
+```bash
+# Password is retrieved at instance launch via:
+aws secretsmanager get-secret-value \
+  --secret-id csye6225-db-password \
+  --region us-east-1
+```
+
+### SSL/TLS Configuration
+
+#### DEV Environment
+ACM certificate is requested and validated automatically via DNS (Route53):
+```hcl
+resource "aws_acm_certificate" "dev_cert" {
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+}
+```
+
+#### DEMO Environment
+A third-party SSL certificate (Let's Encrypt) is imported into ACM manually, then referenced via `acm_certificate_arn` in `terraform.demo.tfvars`.
+
+**To import a new certificate for DEMO:**
+```bash
+# Step 1: Obtain certificate via Certbot
+sudo certbot certonly --manual --preferred-challenges dns \
+  -d demo.keerthana.click
+
+# Step 2: Add the DNS TXT record shown by Certbot to Route53
+# (in the demo.keerthana.click hosted zone)
+
+# Step 3: Copy cert files (sudo required)
+sudo cp /etc/letsencrypt/live/demo.keerthana.click/cert.pem ~/Desktop/cert.pem
+sudo cp /etc/letsencrypt/live/demo.keerthana.click/privkey.pem ~/Desktop/privkey.pem
+sudo cp /etc/letsencrypt/live/demo.keerthana.click/fullchain.pem ~/Desktop/fullchain.pem
+sudo chmod 644 ~/Desktop/cert.pem ~/Desktop/privkey.pem ~/Desktop/fullchain.pem
+
+# Step 4: Import into ACM
+aws acm import-certificate \
+  --certificate fileb://~/Desktop/cert.pem \
+  --private-key fileb://~/Desktop/privkey.pem \
+  --certificate-chain fileb://~/Desktop/fullchain.pem \
+  --region us-east-1 \
+  --profile demo
+
+# Step 5: Clean up local cert files
+rm ~/Desktop/cert.pem ~/Desktop/privkey.pem ~/Desktop/fullchain.pem
+
+# Step 6: Update terraform.demo.tfvars with the returned CertificateArn
+```
+
+> The certificate expires on **2026-07-03** and must be renewed before then.
 
 ### IAM Roles & Policies
 
-The IAM role created by Terraform grants the EC2 instance:
-- **CloudWatchAgentServerPolicy** — allows the CloudWatch agent to publish logs and metrics
-- **S3 Policy** — scoped access to the syllabus S3 bucket (PutObject, GetObject, DeleteObject, ListBucket)
-
-> No AWS credentials are hardcoded in the AMI or EC2 instance. The IAM role is attached via instance profile.
-
-### CloudWatch Agent
-
-The EC2 userdata script (`user_data.sh`) configures and starts the CloudWatch agent on every instance launch:
-
-```bash
-/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
-  -a fetch-config -m ec2 \
-  -c file:/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-config.json \
-  -s
-
-systemctl enable amazon-cloudwatch-agent
-systemctl restart amazon-cloudwatch-agent
-```
+The IAM role grants the EC2 instance:
+- **CloudWatchAgentServerPolicy** — publish logs and metrics
+- **S3 Policy** — scoped access to the app S3 bucket
+- **Secrets Manager Policy** — read-only access to the DB password secret
+- **KMS Policy** — decrypt access for EC2/S3/RDS/Secrets keys
 
 ### DNS
 
-Route53 is managed by Terraform:
-- A record for `dev.keerthana.click` → EC2 public IP
-- A record for `demo.keerthana.click` → EC2 public IP
+| Zone | Account | Zone ID |
+|------|---------|---------|
+| `keerthana.click` | Root | (root account) |
+| `dev.keerthana.click` | DEV | `Z06555121LSBIWVMZVAH` |
+| `demo.keerthana.click` | DEMO | `Z04656191C89OSEWJWNC8` |
 
-### Usage
+The application is accessible at:
+- DEV: `https://dev.keerthana.click`
+- DEMO: `https://demo.keerthana.click`
+
+### Auto Scaling Group
+
+The ASG is configured with:
+- Minimum: 1 instance
+- Maximum: 3 instances
+- Desired: 1 instance
+- Health check type: ELB
+- Instance refresh triggered automatically on new AMI via CI/CD
+
+---
+
+## Usage
+
+### DEV Environment
 
 ```bash
 cd aws
 
-# Copy and edit variables
 cp terraform.tfvars.example terraform.tfvars
-nano terraform.tfvars
-
-# Initialize
-terraform init
-
-# Preview
-terraform plan -var='db_password=YourPassword'
-
-# Apply
-terraform apply -var='db_password=YourPassword'
-
-# Destroy
-terraform destroy -var='db_password=YourPassword'
-```
-
-### Configuration
-
-Edit `terraform.tfvars`:
-
-```hcl
-aws_region           = "us-east-1"
-aws_profile          = "dev"
-vpc_name             = "csye6225-vpc"
-vpc_cidr             = "10.0.0.0/16"
-public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
-application_port     = 8080
-aws_instance_type    = "t2.micro"
-domain_name          = "dev.keerthana.click"
-```
-
-### Outputs
-
-After applying, Terraform outputs:
-- VPC ID
-- Public and Private Subnet IDs
-- Internet Gateway ID
-- Route Table IDs
-- EC2 public IP and app URL
-- RDS endpoint
-- S3 bucket name
-
----
-
-## GCP Infrastructure
-
-### Resources Created
-
-- 1 VPC Network with custom subnet mode
-- 3 Public Subnets in `us-east1` region
-- 3 Private Subnets in `us-east1` region
-- 1 Internet Route (0.0.0.0/0 → default internet gateway)
-- Firewall Rules: Allow SSH (22), HTTP (80), HTTPS (443), app port (8080)
-- GCP Compute Instance running the web application image
-- 1 Cloud Router
-
-### Usage
-
-```bash
-cd gcp
-
-gcloud config configurations activate dev
-gcloud auth application-default login
-
-cp terraform.tfvars.example terraform.tfvars
-nano terraform.tfvars
+# Edit terraform.tfvars with your values
 
 terraform init
 terraform plan
@@ -167,114 +184,73 @@ terraform apply
 terraform destroy
 ```
 
-### Configuration
+### DEMO Environment
 
-Edit `terraform.tfvars`:
+```bash
+cd aws
 
-```hcl
-gcp_project_id = "csye6225-dev-487102"
-vpc_name       = "csye6225-dev-vpc1"
-gcp_region     = "us-east1"
+cp terraform.demo.tfvars.example terraform.demo.tfvars
+# Edit terraform.demo.tfvars with your values
+
+terraform init
+terraform plan -var-file=terraform.demo.tfvars
+terraform apply -var-file=terraform.demo.tfvars
+terraform destroy -var-file=terraform.demo.tfvars
 ```
+
+### Configuration Variables
+
+| Variable | DEV | DEMO |
+|----------|-----|------|
+| `aws_profile` | `dev` | `demo` |
+| `domain_name` | `dev.keerthana.click` | `demo.keerthana.click` |
+| `route53_zone_id` | `Z06555121LSBIWVMZVAH` | `Z04656191C89OSEWJWNC8` |
+| `acm_certificate_arn` | `""` (ACM manages) | `arn:aws:acm:...` |
+| `ses_from_email` | `no-reply@dev.keerthana.click` | `no-reply@demo.keerthana.click` |
 
 ---
 
 ## CI/CD Pipeline
 
-This repository uses GitHub Actions for continuous integration.
+### Terraform Validate Workflow
 
-### Workflow Triggers
-
-- Pull requests to `main` branch
-- Changes to `aws/`, `gcp/`, or workflow files
-
-### Pipeline Steps
-
-- Terraform Format Check
-- Terraform Init
-- Terraform Validate
+Triggers on pull requests to `main`. Steps:
+1. Terraform Format Check
+2. Terraform Init
+3. Terraform Validate (AWS + GCP)
 
 ### Status Checks
 
-Pull requests must pass all status checks before merging:
-- ✅ Terraform AWS - Format and Validate
-- ✅ Terraform GCP - Format and Validate
-
----
-
-## DNS Setup
-
-### Zone Delegation
-
-| Zone | Account | Type |
-|------|---------|------|
-| `keerthana.click` | Root | Public Hosted Zone |
-| `dev.keerthana.click` | Dev | Public Hosted Zone |
-| `demo.keerthana.click` | Demo | Public Hosted Zone |
-
-NS records for `dev` and `demo` subdomains are configured in the root account for zone delegation.
-
-The application is accessible at:
-- Dev: `http://dev.keerthana.click:8080`
-- Demo: `http://demo.keerthana.click:8080`
-
----
-
-## Development Workflow
-
-1. Fork the repository
-2. Create a feature branch:
-   ```bash
-   git checkout -b feature/my-changes
-   ```
-3. Make changes
-4. Format and validate:
-   ```bash
-   terraform fmt -recursive
-   cd aws && terraform validate
-   cd ../gcp && terraform validate
-   ```
-5. Commit and push
-6. Create Pull Request
-7. Wait for CI checks to pass
-8. Merge after approval
+- Terraform AWS - Format and Validate
+- Terraform GCP - Format and Validate
 
 ---
 
 ## Security Considerations
 
-- `terraform.tfvars` is excluded from version control
-- No credentials or access keys committed to the repository
+- `terraform.tfvars` and `terraform.demo.tfvars` are excluded from version control
+- No credentials, passwords, or access keys committed to the repository
+- RDS password is auto-generated and stored in Secrets Manager — never hardcoded
+- All data at rest encrypted with dedicated KMS keys (90-day rotation)
+- RDS deployed in private subnets (not publicly accessible)
+- EC2 instances not directly accessible — traffic flows through ALB only
 - IAM roles use least privilege policies
-- RDS is deployed in private subnets (not publicly accessible)
-- S3 bucket access is scoped to the specific bucket only
-- CloudWatch agent uses IAM role — no hardcoded AWS credentials
+- HTTPS enforced via ALB listener on port 443
 
 ---
 
 ## Troubleshooting
 
-### AWS CLI Issues
-
 ```bash
-aws configure list --profile dev
+# Check AWS profile
 aws sts get-caller-identity --profile dev
-aws configure --profile dev
-```
+aws sts get-caller-identity --profile demo
 
-### GCP Authentication Issues
-
-```bash
-gcloud auth application-default login --no-launch-browser
-gcloud config configurations list
-gcloud config configurations activate dev
-```
-
-### Terraform Errors
-
-```bash
+# Reset Terraform state
 rm -rf .terraform .terraform.lock.hcl
 terraform init
+
+# Format and validate
 terraform fmt -recursive
 terraform validate
 ```
