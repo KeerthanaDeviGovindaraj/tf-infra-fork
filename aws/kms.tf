@@ -24,16 +24,22 @@ resource "aws_kms_key" "ec2_key" {
         Resource = "*"
       },
       {
-        Sid    = "AllowEC2Service"
+        Sid    = "AllowEC2AndASG"
         Effect = "Allow"
         Principal = {
-          Service = "ec2.amazonaws.com"
+          AWS = [
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+          ]
         }
         Action = [
           "kms:Decrypt",
           "kms:GenerateDataKey",
+          "kms:GenerateDataKeyWithoutPlaintext",
           "kms:DescribeKey",
-          "kms:CreateGrant"
+          "kms:CreateGrant",
+          "kms:ListGrants",
+          "kms:RevokeGrant",
+          "kms:ReEncrypt*"
         ]
         Resource = "*"
       }
