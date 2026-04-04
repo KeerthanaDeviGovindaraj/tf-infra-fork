@@ -1,34 +1,15 @@
-aws_region  = "us-east-1"
-project_name = "myproject"
-environment  = "dev"
-owner        = "yourname"
-
-# VPC Configuration
+aws_region           = "us-east-1"
+aws_profile          = "dev"
+vpc_name             = "csye6225-vpc"
 vpc_cidr             = "10.0.0.0/16"
-availability_zones   = ["us-east-1a", "us-east-1b"]
-public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
-private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
+application_port     = 8080
+aws_instance_type    = "t2.micro"
+domain_name          = "dev.keerthana.click"
+route53_zone_id      = "Z06555121LSBIWVMZVAH"
+acm_certificate_arn  = ""
+ses_from_email       = "no-reply@dev.keerthana.click"
+app_domain           = "dev.keerthana.click"
+lambda_zip_path      = "./lambda.zip"
 
-# Gateway Configuration
-enable_nat_gateway = true
-enable_vpn_gateway = false
-
-aws_region  = "us-east-1"
-aws_profile = "your-profile"
-vpc_name    = "csye6225"
-
-application_port  = 8080
-aws_instance_type = "t2.micro"
-
-# RDS Configuration
-db_instance_class         = "db.t3.micro"
-db_engine_version         = "16.4"
-db_parameter_group_family = "postgres16"
-db_name                   = "csye6225"
-db_username               = "csye6225"
-db_password               = "YourStr0ngP@ssword!"  # CHANGE THIS
-
-
-ses_from_email  = "no-reply@example.com"
-app_domain      = "example.com"
-lambda_zip_path = "./lambda.zip"
