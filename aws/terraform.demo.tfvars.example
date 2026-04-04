@@ -1,0 +1,14 @@
+aws_region           = "us-east-1"
+aws_profile          = "demo"
+vpc_name             = "csye6225-vpc"
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
+application_port     = 8080
+aws_instance_type    = "t2.micro"
+domain_name          = "demo.keerthana.click"
+route53_zone_id      = "Z04656191C89OSEWJWNC8"
+acm_certificate_arn  = "arn:aws:acm:us-east-1:156667831591:certificate/86b6a2ea-9c91-4f91-8d71-818115e2f9b6"
+ses_from_email       = "no-reply@demo.keerthana.click"
+app_domain           = "demo.keerthana.click"
+lambda_zip_path      = "./lambda.zip"
