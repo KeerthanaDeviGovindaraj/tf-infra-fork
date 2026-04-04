@@ -36,6 +36,21 @@ resource "aws_kms_key" "ec2_key" {
           "kms:CreateGrant"
         ]
         Resource = "*"
+      },
+      {
+        Sid    = "AllowAutoScalingService"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:DescribeKey",
+          "kms:CreateGrant",
+          "kms:ReEncrypt*"
+        ]
+        Resource = "*"
       }
     ]
   })
