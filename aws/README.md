@@ -123,3 +123,34 @@ terraform destroy
 3. Enable VPC Flow Logs for network monitoring
 4. Implement least-privilege security groups
 5. Use AWS Secrets Manager for sensitive data
+## SSL Certificate Import (DEMO Environment)
+
+The DEMO environment uses a Let's Encrypt SSL certificate imported into AWS Certificate Manager.
+
+### Steps to import certificate for DEMO:
+
+```bash
+# Step 1: Obtain certificate via Certbot
+sudo certbot certonly --manual --preferred-challenges dns \
+  -d demo.keerthana.click
+
+# Step 2: Copy cert files
+sudo cp /etc/letsencrypt/live/demo.keerthana.click/cert.pem ~/Desktop/cert.pem
+sudo cp /etc/letsencrypt/live/demo.keerthana.click/privkey.pem ~/Desktop/privkey.pem
+sudo cp /etc/letsencrypt/live/demo.keerthana.click/fullchain.pem ~/Desktop/fullchain.pem
+sudo chmod 644 ~/Desktop/cert.pem ~/Desktop/privkey.pem ~/Desktop/fullchain.pem
+
+# Step 3: Import into ACM
+aws acm import-certificate \
+  --certificate fileb://~/Desktop/cert.pem \
+  --private-key fileb://~/Desktop/privkey.pem \
+  --certificate-chain fileb://~/Desktop/fullchain.pem \
+  --region us-east-1 \
+  --profile demo
+
+# Step 4: Clean up
+rm ~/Desktop/cert.pem ~/Desktop/privkey.pem ~/Desktop/fullchain.pem
+
+# Step 5: Update terraform.tfvars with the returned CertificateArn
+# acm_certificate_arn = "arn:aws:acm:us-east-1:156667831591:certificate/..."
+```
